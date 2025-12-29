@@ -1,26 +1,13 @@
 from fastapi import FastAPI, Request
-from telegram import Update
-from telegram.ext import ApplicationBuilder
 import os
+from telegram import Update
 
-from bot import handle_voice, handle_location
-
-BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
+from bot import create_telegram_app
 
 app = FastAPI()
 
-telegram_app = (
-    ApplicationBuilder()
-    .token(BOT_TOKEN)
-    .build()
-)
+telegram_app = create_telegram_app()
 
-telegram_app.add_handler(
-    MessageHandler(filters.LOCATION, handle_location)
-)
-telegram_app.add_handler(
-    MessageHandler(filters.VOICE, handle_voice)
-)
 
 @app.on_event("startup")
 async def startup():
@@ -30,12 +17,14 @@ async def startup():
         await telegram_app.bot.set_webhook(webhook_url)
         print("✅ Telegram webhook registered")
 
+
 @app.post("/telegram/webhook")
 async def telegram_webhook(request: Request):
     data = await request.json()
     update = Update.de_json(data, telegram_app.bot)
     await telegram_app.process_update(update)
     return {"ok": True}
+
 
 @app.get("/")
 def health():
